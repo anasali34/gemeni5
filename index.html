@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ckb" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>دکتۆر ئایتی مستەفا - سیستەمی بەڕێوەبردن</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; color: #212529; font-family: Tahoma; }
+        .card { background: #ffffff; border: 1px solid #dee2e6; border-radius: 10px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .table { color: #212529; }
+        h3, h5, h6 { color: #0d6efd; }
+    </style>
+</head>
+<body class="p-4">
+
+<div id="login-section" class="container" style="max-width:400px;">
+    <div class="card text-center">
+        <h3>دکتۆر ئایتی مستەفا</h3>
+        <p>پەیوەندی: 07701990604</p>
+        <input type="text" id="user" class="form-control mb-2" placeholder="ناوی بەکارهێنەر">
+        <input type="password" id="pass" class="form-control mb-2" placeholder="پاسۆرد">
+        <button class="btn btn-primary w-100" onclick="login()">چوونەژوورەوە</button>
+    </div>
+</div>
+
+<div id="main-app" class="d-none container">
+    <div class="row">
+        <div id="admin-panel" class="col-md-4 d-none">
+            <div class="card">
+                <h5>پەنەڵی ئەدمین</h5>
+                <input type="text" id="pName" class="form-control mb-2" placeholder="ناوی کاڵا">
+                <select id="pCat" class="form-control mb-2">
+                    <option value="مۆبایل">مۆبایل</option>
+                    <option value="ئێکسسوارات">ئێکسسوارات</option>
+                </select>
+                <input type="number" id="pPrice" class="form-control mb-2" placeholder="نرخ ($)">
+                <button class="btn btn-success w-100" onclick="addProduct()">زیادکردنی کاڵا</button>
+                <hr>
+                <h6>ڕاپۆرتی ڕۆژانە</h6>
+                <p>کۆی نەقد: <span id="totalCash" class="text-success">0</span>$</p>
+                <p>کۆی قەرز: <span id="totalDebt" class="text-warning">0</span>$</p>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <h5>لیستی کاڵاکان</h5>
+                <table class="table table-hover">
+                    <thead><tr><th>ناو</th><th>جۆر</th><th>نرخ</th><th>کردار</th></tr></thead>
+                    <tbody id="prodTable"></tbody>
+                </table>
+                <hr>
+                <select id="prodList" class="form-control mb-2"></select>
+                <input type="text" id="custName" class="form-control mb-2" placeholder="ناوی کڕیار (بۆ قەرز)">
+                <select id="payType" class="form-control mb-2">
+                    <option value="نەقد">نەقد</option>
+                    <option value="قەرز">قەرز</option>
+                </select>
+                <button class="btn btn-primary w-100" onclick="sell()">تۆمارکردن و چاپکردن</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let products = JSON.parse(localStorage.getItem('products')) || [];
+    let sales = JSON.parse(localStorage.getItem('sales')) || [];
+
+    function login() {
+        let u = document.getElementById('user').value;
+        if (u === "mustafa" || u === "staff") {
+            document.getElementById('login-section').classList.add('d-none');
+            document.getElementById('main-app').classList.remove('d-none');
+            if(u === "mustafa") { document.getElementById('admin-panel').classList.remove('d-none'); updateReports(); }
+            renderList();
+        } else alert("زانیاری هەڵەیە!");
+    }
+
+    function addProduct() {
+        products.push({name: document.getElementById('pName').value, cat: document.getElementById('pCat').value, price: document.getElementById('pPrice').value});
+        localStorage.setItem('products', JSON.stringify(products));
+        renderList();
+    }
+
+    function deleteProduct(index) {
+        products.splice(index, 1);
+        localStorage.setItem('products', JSON.stringify(products));
+        renderList();
+    }
+
+    function renderList() {
+        let isAdmin = document.getElementById('user').value === "mustafa";
+        document.getElementById('prodTable').innerHTML = products.map((p, i) => `
+            <tr><td>${p.name}</td><td>${p.cat}</td><td>${p.price}$</td>
+            <td>${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteProduct(${i})">سڕینەوە</button>` : 'بەشی ئەدمین'}</td>
+            </tr>`).join('');
+        
+        document.getElementById('prodList').innerHTML = products.map(p => `<option value="${p.price}">${p.name} - ${p.price}$</option>`).join('');
+    }
+
+    function sell() {
+        let price = document.getElementById('prodList').value;
+        let item = document.getElementById('prodList').options[document.getElementById('prodList').selectedIndex].text;
+        let pay = document.getElementById('payType').value;
+        let cust = document.getElementById('custName').value || "کڕیاری گشتی";
+        
+        sales.push({total: price, pay: pay, cust: cust});
+        localStorage.setItem('sales', JSON.stringify(sales));
+        
+        let win = window.open('', '', 'width=400,height=400');
+        win.document.write(`<div style="text-align:center;"><h2>دکتۆر ئایتی مستەفا</h2><p>07701990604</p><hr><p>کاڵا: ${item}</p><p>کڕیار: ${cust}</p><p>شێواز: ${pay}</p><hr><h3>کۆی گشتی: ${price}$</h3></div>`);
+        win.print();
+        
+        if(document.getElementById('user').value === "mustafa") updateReports();
+        alert("تۆمارکرا");
+    }
+
+    function updateReports() {
+        let cash = sales.filter(s => s.pay === 'نەقد').reduce((s, x) => s + parseFloat(x.total), 0);
+        let debt = sales.filter(s => s.pay === 'قەرز').reduce((s, x) => s + parseFloat(x.total), 0);
+        document.getElementById('totalCash').innerText = cash;
+        document.getElementById('totalDebt').innerText = debt;
+    }
+</script>
+</body>
+</html>
